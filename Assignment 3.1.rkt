@@ -49,13 +49,13 @@ expressions
          (match sexpr
            [(number: n) (Num n)]
            [(symbol: name) (Id name)]
-          [(cons 'with more)
-     (match sexpr
-     [(list 'with (list (symbol: name) named-expr) body)
-     (With name (parse-sexpr named-expr) (parse-sexpr body))]
-     [else (error 'parse-sexpr "bad with syntax in ~s" sexpr )])]
+           [(cons 'with more)
+           (match sexpr
+             [(list 'with (list (symbol: name) named-expr) body)
+              (With name (parse-sexpr named-expr) (parse-sexpr body))]
+             [else (error 'parse-sexpr "bad with syntax in ~s" sexpr )])]
            [(cons 'fun more)
-           ( match sexpr
+            ( match sexpr
               [(list 'fun (list (symbol: name)) body) (Fun name (parse-sexpr body))]
               [else (error 'parse-sexpr "bad fun syntax!!")])]
            [(list 'call fun-expr arg-expr) (Call (parse-sexpr fun-expr) (parse-sexpr arg-expr))]
@@ -126,8 +126,7 @@ Eelse[v/x]}}
                                 (if (eq? named from) body
                                     (subst body from to)))]
   [(Id name)(if(eq? name from) to expr)]
- [(Fun name body)
-  (Fun name (if (eq? name from) body (subst body from to)))]; parameter-name, body
+  [(Fun name body) (Fun name (if (eq? name from) body (subst body from to)))]; parameter-name, body
  [(Call fun-expr arg-expr) (Call (subst fun-expr from to)(subst arg-expr from to))]   
  [(Bool b) (Bool b)] 
  [(Equal l r)(Equal (subst l from to)(subst r from to))] 
@@ -147,7 +146,7 @@ Eelse[v/x]}}
  (cases e 
  [(Num n) n] 
  [else (error 'Num->number "expected a number, got: ~s" e)])) 
- (: arith-op : (Number Number -> Number) FLANG FLANG -> FLANG) 
+ (: arith-op : (Number Number -> Number) FLANG FLANG -> FLANG) ;;***
  ;; gets a Racket numeric binary operator, and uses it within a FLANG 
  ;; `Num' wrapper 
  (define (arith-op op expr1 expr2) 
@@ -214,9 +213,10 @@ Eelse[v/x]}}
  (define (run str) 
  (let ([result (eval (parse str))]) 
 (cases result 
- [(Num n)n] 
- [(Bool b)b] 
- [else (error 'run "evaluation returned a non -number ~s" result)>]))) 
+ [(Num n)n]
+ [(Bool b) b]
+  [(Fun name body) (Fun name body)]
+ [else (error 'run "evaluation returned a non -number ~s" result)] )))
 
 (test (run "{> 2 3}")=> false)
 ;; tests 
@@ -232,9 +232,10 @@ Eelse[v/x]}}
 (test (run "{with {c True} 
  {if c {then-do {> 2 1}} {else-do 2}}}") 
  => true) 
-;(test (run "{with {foo {fun {x} 
- ;if {< x 2} {then-do x} {else-do {/ x 2}}}} foo}") 
- ;=> (Fun 'x (If (Smaller (Id 'x) (Num 2)) (Id 'x) (Div (Id 'x) (Num 2))))) 
+(test (run "{with {foo {fun {x} {if {< x 2} {then-do x} {else-do {/ x 2}}}}} foo}") 
+ => (Fun 'x (If (Smaller (Id 'x) (Num 2)) (Id 'x) (Div (Id 'x) (Num 2)))))
+(test (run "{call {with {foo {fun {x} {* x 4}}} foo} 3}") => 12)
+
 (test (run "{with {x 0} 
  {if {> x 0} {/ 2 x} x}}") 
  =error> "parse-sexpr: bad `if' syntax in (if (> x 0) (/ 2 x) x)") 
