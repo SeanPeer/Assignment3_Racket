@@ -69,7 +69,7 @@ expressions
            [(list '= lhs rhs) (Equal (parse-sexpr lhs) (parse-sexpr rhs))]
            [(list '> lhs rhs) (Bigger (parse-sexpr lhs) (parse-sexpr rhs))]
            [(list '< lhs rhs) (Smaller (parse-sexpr lhs) (parse-sexpr rhs))]
-           [(list 'not exp) (parse-sexpr exp)]
+           [(list 'not exp) (Not (parse-sexpr exp))]
            [(cons 'if rest)
             (match rest
               [(cons  condition  con)(match con
