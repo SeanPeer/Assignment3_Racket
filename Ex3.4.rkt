@@ -49,11 +49,11 @@ expressions
          (match sexpr
            [(number: n) (Num n)]
            [(symbol: name) (Id name)]
-           [(cons 'with more)
-            ( match sexpr
-               [(list 'with (list (symbol: name) named-expr) body)
-                                      (With name (parse-sexpr named-expr) (parse-sexpr body))]
-               [else (error 'parse-sexpr "bad with syntax!!")])]
+          [(cons 'with more)
+     (match sexpr
+     [(list 'with (list (symbol: name) named-expr) body)
+     (With name (parse-sexpr named-expr) (parse-sexpr body))]
+     [else (error 'parse-sexpr "bad with syntax in ~s" sexpr )])]
            [(cons 'fun more)
            ( match sexpr
               [(list 'fun (list (symbol: name)) body) (Fun name (parse-sexpr body))]
@@ -63,8 +63,8 @@ expressions
            [(list '- l r) (Sub (parse-sexpr l) (parse-sexpr r))]
            [(list '* l r) (Mul (parse-sexpr l) (parse-sexpr r))]
            [(list '/ l r) (Div (parse-sexpr l) (parse-sexpr r))]  
-           ["True" (Bool true)]
-           ["False" (Bool false)]
+           ['True (Bool true)]
+           ['False (Bool false)]
            [(symbol: name) (Id name)]
            [(list '= lhs rhs) (Equal (parse-sexpr lhs) (parse-sexpr rhs))]
            [(list '> lhs rhs) (Bigger (parse-sexpr lhs) (parse-sexpr rhs))]
@@ -168,8 +168,8 @@ Eelse[v/x]}}
  ;; since it's used in more than one place. 
  (define (flang->bool e) 
  (cases e 
- [(Bool b) (eq? b #t)] 
-[else (flang->bool (eval e)) ]))
+ [(Bool b) b] 
+[else #t ]))
  ;; gets a Racket Boolean binary operator (on numbers), and applies it 
  ;; to two `Num' wrapped FLANGs 
 
@@ -199,9 +199,13 @@ Eelse[v/x]}}
  [(Bigger l r)(logic-op > (eval l) (eval r))] 
  [(Smaller l r)(logic-op < (eval l) (eval r))]
  [(If l m r) 
- (let ([boll (eval l)]) 
- (if (eq? boll #f)  (eval r)(eval m)))]
- [(Id name)(error 'eval "free identifier: ~s" name)]
+  (let ([boll (flang->bool (eval l))]) 
+ (if (eq?  boll #f)  (eval r)(eval m)))]
+ [(Id name)(match name
+             ['True (Bool #t)]
+             ['False(Bool #f)]
+             [else (error 'eval "free identifier: ~s" name) ])]
+  
  [(Not exp)(Bool (not (eval exp)))])) 
 
 (test (eval (Not(Bool #t)))=> (Bool #f))
@@ -217,18 +221,18 @@ Eelse[v/x]}}
 
 (test (run "{> 2 3}")=> false)
 ;; tests 
-;(test (run "True") => true) 
-;(test (run "{not True}") => false) 
+(test (run "True") => true) 
+(test (run "{not True}") => false) 
 (test (run "{> 3 44}") => false) 
 (test (run "{if {- 3 3} {then-do 4} {else-do 5}}") => 4) 
 (test (run "{with {x 8} 
  {if {> x 0} {then-do {/ 2 x}} {else-do x}}}") => 1/4) 
-;(test (run "{with {x 0} 
-; {if {> x 0} {then-do {/ 2 x}} {else-do x}}}") => 0) 
-;(test (run "{if {> 2 1} {then-do True} {else-do {+ 2 2}}}") => true) 
-;(test (run "{with {c True} 
- ;{if c {then-do {> 2 1}} {else-do 2}}}") 
-; => true) 
+(test (run "{with {x 0} 
+{if {> x 0} {then-do {+ 2 x}} {else-do x}}}") => 0) 
+(test (run "{if {> 2 1} {then-do True} {else-do {+ 2 2}}}") => true) 
+(test (run "{with {c True} 
+ {if c {then-do {> 2 1}} {else-do 2}}}") 
+ => true) 
 ;(test (run "{with {foo {fun {x} 
  ;if {< x 2} {then-do x} {else-do {/ x 2}}}} foo}") 
  ;=> (Fun 'x (If (Smaller (Id 'x) (Num 2)) (Id 'x) (Div (Id 'x) (Num 2))))) 
@@ -236,6 +240,6 @@ Eelse[v/x]}}
  {if {> x 0} {/ 2 x} x}}") 
  =error> "parse-sexpr: bad `if' syntax in (if (> x 0) (/ 2 x) x)") 
  (test (run "true") =error> "eval: free identifier: true") 
-;(test (run "{< false 5}") =error> "eval: free identifier: false") 
-;(test (run "{< False 5}") 
- ;=error> "Num->number: expected a number, got: #(struct:Bool #f)")
+(test (run "{< false 5}") =error> "eval: free identifier: false") 
+(test (run "{< False 5}") 
+ =error> "Num->number: expected a number, got: #(struct:Bool #f)")
